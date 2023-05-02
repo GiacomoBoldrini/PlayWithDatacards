@@ -35,11 +35,12 @@ options.fixpars = False
 options.libs = []
 options.verbose = 0
 options.poisson = 0
-options.nuisancesToExclude = []
+options.nuisancesToExclude = ["QCDscale_VBS_VV_QCD"]
 options.noJMax = True
 options.allowNoSignal = True
-
-
+options.modelparams = []
+options.optimizeTemplateBins = False
+options.format = "html"
 
 # import ROOT with a fix to get batch mode (http://root.cern.ch/phpBB3/viewtopic.php?t=3198)
 import sys
@@ -172,7 +173,9 @@ function toggleChann(id) {
         print "</tr>"
         print "<tr id=\"%s_chann\" style=\"display: none\">" % nuis
         print "\t<td colspan=\"5\"><table class=\"channDetails\">" 
-        for x in sorted(val["bins"]): print "\t\t<tr><td>%s</td><td>%s</td></li>" % (x, ", ".join(["%s(%s)"%(k,v) for (k,v) in errlines[nuis][x].iteritems() if v != 0]))
+        for x in sorted(val["bins"]):
+           if len(", ".join(["%s(%s)"%(k,v) for (k,v) in errlines[nuis][x].iteritems() if v != 0])) != 0:
+              print "\t\t<tr><td>%s</td><td>%s</td></li>" % (x, ", ".join(["%s(%s)"%(k,v) for (k,v) in errlines[nuis][x].iteritems() if v != 0]))
         print "\t</table></td>"
         print "</tr>\n"
     print """
@@ -294,9 +297,13 @@ elif "tex" in options.format:
          for background in backgrounds :
            if background in val['processes'] : 
              for x in sorted(val["bins"]): 
+                if not background in errlines[nuis][x].keys():
+                   print(nuis, x, background, errlines[nuis][x].keys())
+                   backgrounds_uncertainties[background] = 0
+                   continue
                 print (' &  %s'  % (errlines[nuis][x][background])),
-
                 uncertainty = (errlines[nuis][x][background])
+                print "uncertainty = ", uncertainty                
                 if isinstance(uncertainty, list) : 
                   symmetrized_error = (abs(uncertainty[0]-1) +  abs(uncertainty[1]-1)) / 2.
                   uncertainty = symmetrized_error
@@ -381,18 +388,22 @@ elif "tex" in options.format:
 
     for signal in signals :
       summaryTable.write(' %13s ' % signal.replace('_', '-'))
-      if signal in signals_uncertainties.keys() :
+      if signal in signals_uncertainties.keys() and signal in DC.exp[the_only_channel].keys():
         summaryTable.write(' & %.2f $\\pm$ %.2f \\\\  \n ' % (DC.exp[the_only_channel][signal] , DC.exp[the_only_channel][signal] * signals_uncertainties[signal]) )
-      else :
-        summaryTable.write(' & %.2f $\\pm$ %.2f \\\\  \n ' % (DC.exp[the_only_channel][signal] , DC.exp[the_only_channel][signal] * 0.) )        
+      elif signal in DC.exp[the_only_channel].keys() :
+        summaryTable.write(' & %.2f $\\pm$ %.2f \\\\  \n ' % (DC.exp[the_only_channel][signal] , DC.exp[the_only_channel][signal] * 0.) )   
+      else:
+        summaryTable.write(' & 0 $\\pm$ 0 \\\\  \n')
+     
     summaryTable.write('\\hline\n')
 
     total_signal = 0.0
     total_uncertainty_signal = 0.0
     for signal in signals :
-      total_signal += DC.exp[the_only_channel][signal]
-      if signal in signals_uncertainties.keys() :     
-        total_uncertainty_signal = sqrt(total_uncertainty_signal*total_uncertainty_signal + DC.exp[the_only_channel][signal] * signals_uncertainties[signal]  * DC.exp[the_only_channel][signal] * signals_uncertainties[signal])
+      if signal in DC.exp[the_only_channel].keys():
+        total_signal += DC.exp[the_only_channel][signal]
+        if signal in signals_uncertainties.keys() :     
+          total_uncertainty_signal = sqrt(total_uncertainty_signal*total_uncertainty_signal + DC.exp[the_only_channel][signal] * signals_uncertainties[signal]  * DC.exp[the_only_channel][signal] * signals_uncertainties[signal])
         
       #print ' total_uncertainty_signal[', the_only_channel , '] = ', total_uncertainty_signal, ' signals_uncertainties[', signal, '] = ', signals_uncertainties[signal] 
 
@@ -402,18 +413,21 @@ elif "tex" in options.format:
       
     for background in backgrounds :
       summaryTable.write(' %13s ' % background.replace('_', '-'))
-      if background in backgrounds_uncertainties.keys():
+      if background in backgrounds_uncertainties.keys() and background in DC.exp[the_only_channel].keys():
         summaryTable.write(' & %.2f $\\pm$ %.2f \\\\  \n' % (DC.exp[the_only_channel][background] , DC.exp[the_only_channel][background] * backgrounds_uncertainties[background]) )
-      else :
+      elif background in DC.exp[the_only_channel].keys() :
         summaryTable.write(' & %.2f $\\pm$ %.2f \\\\  \n' % (DC.exp[the_only_channel][background] , DC.exp[the_only_channel][background] * 0. ) )        
+      else:
+        summaryTable.write(' & 0 $\\pm$ 0 \\\\  \n')
     summaryTable.write('\\hline\n')
 
     total_background = 0.0
     total_uncertainty_background = 0.0
     for background in backgrounds :
-      total_background += DC.exp[the_only_channel][background]
-      if background in backgrounds_uncertainties.keys():
-        total_uncertainty_background = sqrt(total_uncertainty_background*total_uncertainty_background + DC.exp[the_only_channel][background] * backgrounds_uncertainties[background]  * DC.exp[the_only_channel][background] * backgrounds_uncertainties[background]) 
+      if background in DC.exp[the_only_channel].keys():
+         total_background += DC.exp[the_only_channel][background]
+         if background in backgrounds_uncertainties.keys():
+            total_uncertainty_background = sqrt(total_uncertainty_background*total_uncertainty_background + DC.exp[the_only_channel][background] * backgrounds_uncertainties[background]  * DC.exp[the_only_channel][background] * backgrounds_uncertainties[background]) 
      
      
       
@@ -475,7 +489,13 @@ elif "tex" in options.format:
 
     for signal in signals :
       print (" %13s " % signal.replace('_', '-')),
-      print (" & %.2f $\\pm$ %.2f \\\\ " % (DC.exp[the_only_channel][signal] , DC.exp[the_only_channel][signal] * signals_uncertainties[signal]) )
+      if signal in DC.exp[the_only_channel].keys() and signal in signals_uncertainties.keys():
+        print (" & %.2f $\\pm$ %.2f \\\\ " % (DC.exp[the_only_channel][signal] , DC.exp[the_only_channel][signal] * signals_uncertainties[signal]) )
+      elif signal in DC.exp[the_only_channel].keys():
+        print (" & %.2f $\\pm$ %.2f \\\\ " % (DC.exp[the_only_channel][signal] , DC.exp[the_only_channel][signal] * 0. ))
+      else:
+        print (" & 0.0 $\\pm$ 0.0 \\\\ " )
+        
     print '\\hline'
 
     print (" Total Sig "),
@@ -484,10 +504,12 @@ elif "tex" in options.format:
       
     for background in backgrounds :
       print (" %13s " % background.replace('_', '-')),
-      if background in backgrounds_uncertainties.keys() :
+      if background in backgrounds_uncertainties.keys() and background in DC.exp[the_only_channel].keys():
         print (" & %.2f $\\pm$ %.2f \\\\ " % (DC.exp[the_only_channel][background] , DC.exp[the_only_channel][background] * backgrounds_uncertainties[background]) )
+      elif background in DC.exp[the_only_channel].keys():
+        print (" & %.2f $\\pm$ %.2f \\\\ " % (DC.exp[the_only_channel][background] , DC.exp[the_only_channel][background] * 0.0) )
       else :
-        print (" & %.2f $\\pm$ %.2f \\\\ " % (DC.exp[the_only_channel][background] , DC.exp[the_only_channel][background] * 0.    ) )
+        print (" & 0.0 $\\pm$ 0.0 \\\\ " )
     print '\\hline'
 
     print (" Total Bkg "),
