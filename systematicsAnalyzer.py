@@ -35,12 +35,13 @@ options.fixpars = False
 options.libs = []
 options.verbose = 0
 options.poisson = 0
-options.nuisancesToExclude = ["QCDscale_VBS_VV_QCD"]
+#options.nuisancesToExclude = ["QCDscale_VBS_VV_QCD"]
+options.nuisancesToExclude = []
 options.noJMax = True
 options.allowNoSignal = True
 options.modelparams = []
 options.optimizeTemplateBins = False
-options.format = "html"
+# options.format = "tex"
 
 # import ROOT with a fix to get batch mode (http://root.cern.ch/phpBB3/viewtopic.php?t=3198)
 import sys

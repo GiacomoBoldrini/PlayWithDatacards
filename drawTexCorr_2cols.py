@@ -157,21 +157,26 @@ import numpy as np
 
 names_dict = np.array_split(names, n_tables)
 
+cols = " & ".join("\\textbf{" + i.replace("_", "\_") + "}" for i in channels) + " & ".join("\\textbf{" + i.replace("_", "\_") + "}" for i in channels)
 print("\\begin{center}")
 print("   \\renewcommand{\\arraystretch}{0.8}")
 print("   \\begin{tabular}{ |c|c|" + " ".join("c|" for i in channels) + " }")
 print("   \\hline")
-print("   \\textbf{Nuisance} & \\textbf{type} & " + " & ".join("\\textbf{" + i.replace("_", "\_") + "}" for i in channels) + " \\\ ")
+print("   \\textbf{Nuisance} & \\textbf{type} & " + " & ".join("\\textbf{" + i.replace("_", "\_") + "}" for i in channels) + " \\textbf{Nuisance} & \\textbf{type} & " + " & ".join("\\textbf{" + i.replace("_", "\_") + "}" for i in channels) +  " \\\ ")
 print("   \\hline")
 for idx,names_list in enumerate(names_dict):
 
    
+   idx_ = 0
    for nuis in names_list:
            val = report[nuis]
            type_ = val["types"]
            if "?" in type_: type_ = "shape"
-           l = "   " + nuis.replace("_", "\_") + " & " + type_ + " & "
-          
+           if idx_ == 0:
+              l = "   " + nuis.replace("_", "\_") + " & " + type_ + " & "
+           else:
+              l += " & " +  "   " + nuis.replace("_", "\_") + " & " + type_ + " & "
+
            dings = [0]*len(channels)
            for x in sorted(val["bins"]):
               if "VBSOS" in x: chan = "VBSOS"
@@ -193,9 +198,14 @@ for idx,names_list in enumerate(names_dict):
               else: l += " - & "
    
            l = l[:-2]
-           l += " \\\ "
-   
-           print(l)
+           # l += " \\\ "
+
+           idx_ += 1
+           if idx_ == 2:
+              l += " \\\ "
+              print(l)
+              idx_ = 0
+  
    
    
    

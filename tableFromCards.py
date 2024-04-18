@@ -16,6 +16,7 @@ parser.add_option("-m", "--mass", dest="mass",  default=125, type="float")
 options.bin = True # fake that is a binary output, so that we parse shape lines
 options.noJMax = False
 options.nuisancesToExclude = ''
+options.allowNoSignal = True
 
 from DatacardParser import *
 
